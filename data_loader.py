@@ -32,6 +32,7 @@ def load_data(path_data):
 def create_original_split(df):
     train, test = train_test_split(df, test_size=0.15, train_size =0.85, random_state=0, stratify=df['label'])
     print(f"Original Split - Train: {len(train)}, Test: {len(test)}")
+    return train, test
 
 #Grouped split
 def create_grouped_split(df):
@@ -53,3 +54,4 @@ def create_grouped_split(df):
 
 
     print(f"Grouped Split - Train: {len(train_grouped)}, Test: {len(test_grouped)}")
+    return train_grouped, test_grouped

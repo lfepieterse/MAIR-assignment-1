@@ -1,0 +1,112 @@
+Evaluation of Rule-Based Baseline (original split (85/15)) 
+Accuracy: 0.8422
+Balanced Accuracy: 0.6841
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       0.21      0.75      0.33         4
+      affirm       1.00      0.89      0.94       170
+         bye       1.00      0.56      0.72        16
+     confirm       0.54      0.30      0.39        23
+        deny       0.18      0.50      0.27         4
+       hello       0.21      0.92      0.34        13
+      inform       0.79      0.95      0.87      1398
+      negate       0.40      0.87      0.55        63
+        null       0.88      0.44      0.59       236
+      repeat       0.57      0.80      0.67         5
+     reqalts       0.88      0.46      0.60       245
+     reqmore       1.00      1.00      1.00         1
+     request       0.97      0.80      0.88       934
+     restart       0.00      0.00      0.00         1
+    thankyou       0.97      1.00      0.99       487
+
+    accuracy                           0.84      3600
+   macro avg       0.64      0.68      0.61      3600
+weighted avg       0.87      0.84      0.84      3600
+
+==================================================
+
+Evaluation of Rule-Based Baseline (grouped split) 
+Accuracy: 0.8788
+Balanced Accuracy: 0.6120
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       0.50      0.33      0.40         3
+      affirm       1.00      0.99      0.99       824
+         bye       1.00      0.50      0.67        10
+     confirm       1.00      0.53      0.69        17
+        deny       0.00      0.00      0.00         2
+       hello       0.06      0.67      0.11         9
+      inform       0.78      0.89      0.83       855
+      negate       0.89      0.73      0.80        22
+        null       0.22      0.02      0.04        81
+      repeat       0.50      0.50      0.50         2
+     reqalts       0.77      0.51      0.62       113
+     reqmore       0.00      0.00      0.00         0
+     request       0.98      0.90      0.94      1215
+     restart       0.50      1.00      0.67         1
+    thankyou       0.92      1.00      0.96        73
+
+    accuracy                           0.88      3227
+   macro avg       0.61      0.57      0.55      3227
+weighted avg       0.90      0.88      0.88      3227
+
+==================================================
+
+Evaluation of TFIDF + SVM (original split (85/15)) 
+Accuracy: 0.9822
+Balanced Accuracy: 0.8564
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       1.00      0.25      0.40         4
+      affirm       1.00      0.99      1.00       170
+         bye       0.77      0.62      0.69        16
+     confirm       0.91      0.87      0.89        23
+        deny       1.00      0.25      0.40         4
+       hello       1.00      1.00      1.00        13
+      inform       0.98      0.99      0.99      1398
+      negate       1.00      0.98      0.99        63
+        null       0.94      0.93      0.94       236
+      repeat       1.00      1.00      1.00         5
+     reqalts       0.98      0.97      0.97       245
+     reqmore       1.00      1.00      1.00         1
+     request       0.99      0.99      0.99       934
+     restart       1.00      1.00      1.00         1
+    thankyou       0.99      0.99      0.99       487
+
+    accuracy                           0.98      3600
+   macro avg       0.97      0.86      0.88      3600
+weighted avg       0.98      0.98      0.98      3600
+
+==================================================
+
+Evaluation of TFIDF + SVM (grouped split) 
+Accuracy: 0.9644
+Balanced Accuracy: 0.7185
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       0.00      0.00      0.00         3
+      affirm       1.00      1.00      1.00       824
+         bye       0.54      0.70      0.61        10
+     confirm       0.88      0.82      0.85        17
+        deny       0.00      0.00      0.00         2
+       hello       0.88      0.78      0.82         9
+      inform       0.95      0.95      0.95       855
+      negate       0.95      0.95      0.95        22
+        null       0.63      0.54      0.58        81
+      repeat       1.00      0.50      0.67         2
+     reqalts       0.86      0.89      0.87       113
+     reqmore       0.00      0.00      0.00         0
+     request       0.99      1.00      0.99      1215
+     restart       1.00      1.00      1.00         1
+    thankyou       0.96      0.92      0.94        73
+
+    accuracy                           0.96      3227
+   macro avg       0.71      0.67      0.68      3227
+weighted avg       0.96      0.96      0.96      3227
+
+==================================================
+

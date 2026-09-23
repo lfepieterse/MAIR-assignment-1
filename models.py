@@ -37,15 +37,6 @@ def rule_based_classifying(utterance):
 
   # If no keywords match, inform is very redundant in data
   return "inform"
-"""
-# Evaluate baseline
-baseline = test['utterance'].apply(rule_based_classifying)
-print("Baseline Accuracy:", accuracy_score(test['label'], baseline))
-
-#extra evaluation (balanced accuracy)
-print("Baseline Balanced Accuracy:",
-      balanced_accuracy_score(test['label'], baseline))"""
-      
       
 # TF IDF (Term Frequency–Inverse Document Frequency) representation for random 85/15 split
 #gives a numerical value to words based on:
@@ -85,16 +76,55 @@ tokenizer = DistilBertTokenizer.from_pretrained(
 model = DistilBertModel.from_pretrained(
     "distilbert-base-uncased"
 )
+model.eval()
 
-def get_embedding(text):
-    encoded_input = tokenizer(
-        text,
-        return_tensors='pt'
-    )
 
-    with torch.no_grad():
-        output = model(**encoded_input)
+#processing all utterances in batches of size 32
+def get_embeddings(texts, batch_size=32):
+    embeddings = []
 
-    embedding = output.last_hidden_state.mean(dim=1)
+    #loop through utterances in batch_size steps
+    for i in range(0, len(texts), batch_size):
 
-    return embedding.squeeze().numpy()
+        #take a batch of utterances
+        batch = texts[i:i + batch_size]
+
+        #convert the batch (from text into tokens)
+        #padding=True makes the sequences in the batch the same length
+        #truncation=True prevents sequences from being too long
+        encoded_input = tokenizer(
+            batch,
+            padding=True,
+            truncation=True,
+            return_tensors='pt'
+        )
+
+        #get distilBERT output
+        with torch.no_grad():
+            output = model(**encoded_input)
+
+        #get the token embeddings
+        token_embeddings = output.last_hidden_state
+
+        #get attention mask: 1 for real tokens and 0 for padding tokens
+        #also another dimension added so it can be multiplied with the token embeddings
+        attention_mask = encoded_input['attention_mask'].unsqueeze(-1)
+
+        #ignore padding tokens for computation of the average
+        #set the padding token representations to 0 so they are not included when computing the average
+        masked_embeddings = token_embeddings * attention_mask
+
+        #sum embeddings of the real tokens
+        sum_embeddings = masked_embeddings.sum(dim=1)
+
+        #count amount of real tokens for each sentence
+        sum_mask = attention_mask.sum(dim=1)
+
+        #avg the token embeddings
+        batch_embeddings = sum_embeddings / sum_mask
+
+        #convert to numpy & store this batch
+        embeddings.append(batch_embeddings.numpy())
+
+    #all batches into 1 big array
+    return np.vstack(embeddings)
