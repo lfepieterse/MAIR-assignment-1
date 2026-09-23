@@ -76,7 +76,7 @@ tokenizer = DistilBertTokenizer.from_pretrained(
 model = DistilBertModel.from_pretrained(
     "distilbert-base-uncased"
 )
-model.eval()
+model.eval() #Keeps model frozen
 
 
 #processing all utterances in batches of size 32

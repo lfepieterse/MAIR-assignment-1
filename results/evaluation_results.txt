@@ -82,6 +82,90 @@ weighted avg       0.98      0.98      0.98      3600
 
 ==================================================
 
+Evaluation of TFIDF + Logistic Regression (original split (85/15)) 
+Accuracy: 0.9783
+Balanced Accuracy: 0.6614
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       0.00      0.00      0.00         4
+      affirm       1.00      0.96      0.98       170
+         bye       0.91      0.62      0.74        16
+     confirm       0.89      0.74      0.81        23
+        deny       1.00      0.25      0.40         4
+       hello       1.00      0.92      0.96        13
+      inform       0.97      0.99      0.98      1398
+      negate       1.00      0.97      0.98        63
+        null       0.98      0.90      0.94       236
+      repeat       1.00      0.60      0.75         5
+     reqalts       0.96      0.97      0.97       245
+     reqmore       0.00      0.00      0.00         1
+     request       0.99      0.99      0.99       934
+     restart       0.00      0.00      0.00         1
+    thankyou       0.99      1.00      0.99       487
+
+    accuracy                           0.98      3600
+   macro avg       0.78      0.66      0.70      3600
+weighted avg       0.98      0.98      0.98      3600
+
+==================================================
+
+Evaluation of DISTILBERT + SVM (original split (85/15)) 
+Accuracy: 0.9867
+Balanced Accuracy: 0.8929
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       0.50      0.75      0.60         4
+      affirm       1.00      0.99      0.99       170
+         bye       0.76      0.81      0.79        16
+     confirm       0.95      0.91      0.93        23
+        deny       1.00      0.25      0.40         4
+       hello       1.00      1.00      1.00        13
+      inform       0.98      1.00      0.99      1398
+      negate       0.98      0.98      0.98        63
+        null       0.99      0.95      0.97       236
+      repeat       1.00      0.80      0.89         5
+     reqalts       0.99      0.96      0.98       245
+     reqmore       1.00      1.00      1.00         1
+     request       1.00      1.00      1.00       934
+     restart       1.00      1.00      1.00         1
+    thankyou       0.99      0.99      0.99       487
+
+    accuracy                           0.99      3600
+   macro avg       0.94      0.89      0.90      3600
+weighted avg       0.99      0.99      0.99      3600
+
+==================================================
+
+Evaluation of DISTILBERT + Logistic Regression (original split (85/15)) 
+Accuracy: 0.9864
+Balanced Accuracy: 0.8021
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       0.67      0.50      0.57         4
+      affirm       1.00      0.98      0.99       170
+         bye       0.81      0.81      0.81        16
+     confirm       0.95      0.87      0.91        23
+        deny       1.00      0.25      0.40         4
+       hello       1.00      0.92      0.96        13
+      inform       0.98      1.00      0.99      1398
+      negate       0.98      0.98      0.98        63
+        null       0.97      0.96      0.97       236
+      repeat       1.00      0.80      0.89         5
+     reqalts       0.99      0.97      0.98       245
+     reqmore       1.00      1.00      1.00         1
+     request       0.99      1.00      1.00       934
+     restart       0.00      0.00      0.00         1
+    thankyou       0.99      0.99      0.99       487
+
+    accuracy                           0.99      3600
+   macro avg       0.89      0.80      0.83      3600
+weighted avg       0.99      0.99      0.99      3600
+
+==================================================
+
 Evaluation of TFIDF + SVM (grouped split) 
 Accuracy: 0.9644
 Balanced Accuracy: 0.7185
@@ -107,6 +191,88 @@ Report of the classification:
     accuracy                           0.96      3227
    macro avg       0.71      0.67      0.68      3227
 weighted avg       0.96      0.96      0.96      3227
+
+==================================================
+
+Evaluation of TFIDF + Logistic Regression (grouped split) 
+Accuracy: 0.9517
+Balanced Accuracy: 0.5426
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       0.00      0.00      0.00         3
+      affirm       1.00      0.99      1.00       824
+         bye       0.38      0.30      0.33        10
+     confirm       1.00      0.71      0.83        17
+        deny       0.00      0.00      0.00         2
+       hello       1.00      0.33      0.50         9
+      inform       0.90      0.97      0.93       855
+      negate       1.00      0.86      0.93        22
+        null       0.59      0.12      0.20        81
+      repeat       1.00      0.50      0.67         2
+     reqalts       0.81      0.89      0.85       113
+     request       0.99      0.99      0.99      1215
+     restart       0.00      0.00      0.00         1
+    thankyou       0.91      0.92      0.91        73
+
+    accuracy                           0.95      3227
+   macro avg       0.68      0.54      0.58      3227
+weighted avg       0.94      0.95      0.94      3227
+
+==================================================
+
+Evaluation of DISTILBERT + SVM (grouped split) 
+Accuracy: 0.9706
+Balanced Accuracy: 0.7899
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       0.00      0.00      0.00         3
+      affirm       1.00      1.00      1.00       824
+         bye       0.64      0.90      0.75        10
+     confirm       0.88      0.88      0.88        17
+        deny       0.50      0.50      0.50         2
+       hello       0.70      0.78      0.74         9
+      inform       0.97      0.95      0.96       855
+      negate       1.00      0.95      0.98        22
+        null       0.74      0.77      0.75        81
+      repeat       1.00      0.50      0.67         2
+     reqalts       0.86      0.90      0.88       113
+     reqmore       0.00      0.00      0.00         0
+     request       0.99      0.99      0.99      1215
+     restart       1.00      1.00      1.00         1
+    thankyou       0.99      0.93      0.96        73
+
+    accuracy                           0.97      3227
+   macro avg       0.75      0.74      0.74      3227
+weighted avg       0.97      0.97      0.97      3227
+
+==================================================
+
+Evaluation of DISTILBERT + Logistic Regression (grouped split) 
+Accuracy: 0.9690
+Balanced Accuracy: 0.6492
+Report of the classification:
+              precision    recall  f1-score   support
+
+         ack       0.00      0.00      0.00         3
+      affirm       1.00      1.00      1.00       824
+         bye       0.54      0.70      0.61        10
+     confirm       0.93      0.82      0.88        17
+        deny       0.00      0.00      0.00         2
+       hello       0.86      0.67      0.75         9
+      inform       0.96      0.96      0.96       855
+      negate       1.00      0.86      0.93        22
+        null       0.71      0.74      0.72        81
+      repeat       1.00      0.50      0.67         2
+     reqalts       0.87      0.93      0.90       113
+     request       0.99      1.00      0.99      1215
+     restart       0.00      0.00      0.00         1
+    thankyou       0.96      0.92      0.94        73
+
+    accuracy                           0.97      3227
+   macro avg       0.70      0.65      0.67      3227
+weighted avg       0.97      0.97      0.97      3227
 
 ==================================================
 
