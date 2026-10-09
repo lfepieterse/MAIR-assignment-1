@@ -12,10 +12,15 @@ from models import (
     get_embeddings
 )
 from evaluate import evaluate_test
+from dialogue_state import create_dialogue, END
+from dialogue_manager import transition
+
+from restaurant_repository import load_restaurants
 
 TRAIN_DATA_PATH = "./data/dailog_acts.dat"
 TEST_DATA_PATH = "./data/dialog_acts_test.dat" #for grader, check if the name is correct with the test data file!
 
+#for 1a
 def interactive(trained_models, feature_extractor, model_type):
     print("\n Dialog system")
     classifiers_active = " & ".join(trained_models.keys())
@@ -41,7 +46,38 @@ def interactive(trained_models, feature_extractor, model_type):
             #make prediction for what dialog act the classifier would predict for utterance
             print(f"{classifier} dialog acts predicted: {prediction}") 
             
+#for 1b
+def interactive_dialogue(model, feature_extractor, model_type):
+    dialogue = create_dialogue()
     
+    dialogue["restaurants"] = load_restaurants(
+        "./data/restaurant_info.csv"
+    ) 
+    
+    _, response = transition(dialogue, "hello")
+    print(response)
+    
+    while dialogue["state"] != END:
+        user_text = input("You: ").strip().lower()
+        
+        if user_text == "quit": break
+        if not user_text: continue
+        
+        if model_type == "tfidf":
+            features = feature_extractor.transform([user_text])
+        else:
+            features = get_embeddings(
+                [user_text],
+                batch_size=1
+            )
+        dialogue_act = model.predict(features)[0]
+        
+        _, response = transition(
+            dialogue,
+            dialogue_act,
+            user_text
+        )
+        print(response)
 
 def main(train_path, test_path):
     
@@ -136,9 +172,18 @@ def main(train_path, test_path):
                 evaluate_test(split_test['label'], predictions, evaluation) #use evaluation on the trained models
             
     if choice3 != "B":
-        interactive(trained_models, active_extractor, current_model_type) #so that the user can input an utterance
+        print("\nEnter A to classify utterances "
+                "or B if you want to run the restaurant dialogue")
+        mode = input("Type A or B:").strip().upper()
+        if mode == "B":
+            if "SVM" in trained_models:
+                user_selected_model = trained_models["SVM"]
+            else: user_selected_model = trained_models["Logistic Regression"]
+            interactive_dialogue(user_selected_model, active_extractor, current_model_type)
+        else:
+            interactive(trained_models, active_extractor, current_model_type) #so that the user can input an utterance
 
-if __name__ == "__main__": #This part is with the help of Generative AI tools because could not get it to work properly
+if __name__ == "__main__": 
     parser = argparse.ArgumentParser(description="Pipeline classifier of the dialog act")
     
     parser.add_argument(
