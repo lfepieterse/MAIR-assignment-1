@@ -87,6 +87,41 @@ def transition(dialogue, dialogue_act, user_text=""):
         dialogue["state"] = END
         return remember_last_response(dialogue, "Goodbye! Have a nice day.")
 
+
+    #handle the contact detail requests
+    text = user_text.lower().strip().rstrip(".,!?")
+
+    users_requests = []
+
+    if "phone" in text or "number" in text or "telephone" in text:
+        users_requests.append(("phone", "phone number"))
+    if "address" in text:
+        users_requests.append(("addr", "address"))
+    if any(term in text for term in ("post code", "postcode", "postal code")):
+        users_requests.append(("postcode", "postcode"))
+
+    if users_requests:
+        restaurant = dialogue.get("restaurant")
+
+        if restaurant is None:
+            return remember_last_response(
+                dialogue,
+                "I can provide contact details after recommending a restaurant. "
+                "Let's first find one that matches your preferences."
+            )
+
+        responses_to_request = []
+        for request, description in users_requests:
+            answer = restaurant.get(request) or "unknown"
+            responses_to_request.append(
+                f"The {description} of {restaurant['restaurantname']} is: {answer}"
+            )
+
+        return remember_last_response(
+            dialogue,
+            " ".join(responses_to_request)
+        )
+
     #let the user repeat the current prompt
     if dialogue_act == "repeat":
         return (
@@ -100,7 +135,7 @@ def transition(dialogue, dialogue_act, user_text=""):
         dialogue.clear()
         dialogue.update(create_dialogue())
         dialogue["restaurants"] = restaurants
-        return transition(dialogue, "Hello again")
+        return transition(dialogue, "hello", "Hello again")
 
     if dialogue["state"] == CONFIRM_PREFERENCE:
         text = user_text.lower().strip()
@@ -112,7 +147,7 @@ def transition(dialogue, dialogue_act, user_text=""):
         #if user does not affirm the correction, preferences stay the same
         elif dialogue_act == "negate" or text == "no":
             pass
-        #Let user say yes or no
+        #let the user say yes or no
         else:
             return remember_last_response(
                 dialogue,
@@ -147,7 +182,7 @@ def transition(dialogue, dialogue_act, user_text=""):
                 #if there is a correction possibility, this value is stored 
                 # before being confirmed. by user
                 if correction is not None:
-                    dialogue["pending_scorrection"] = {"slot": slot, "value": correction}
+                    dialogue["pending_correction"] = {"slot": slot, "value": correction}
                     dialogue["state"] = CONFIRM_PREFERENCE
                     
                     #here the confirmation question is stored as last response
@@ -175,14 +210,33 @@ def transition(dialogue, dialogue_act, user_text=""):
 
     #extra requirements
     if dialogue["state"] == ASK_EXTRA_REQUIREMENTS:
-        text = user_text.lower().strip()
         
-        #Need to implement this
-        if text != "no":
+        text = user_text.lower().strip()
+
+        #remove the punctuation at the end
+        text = text.rstrip(".,!?")
+
+        
+        
+        #when the user has no extra requirements
+        no_extra_requirements = {
+            "no",
+            "no thanks",
+            "no thank you",
+            "i don't care",
+            "i dont care",
+            "no preference",
+            "none",
+            "not really"
+        }
+
+        if text not in no_extra_requirements:
             return remember_last_response(
                 dialogue,
-                "not yet implemented (so answer no for extra requirements)"
+                "Please say if you have any extra requirements, "
+                "or say 'no' if you don't."
             )
+
          
         #If no restaurant found for recommendation yet   
         matches = find_matching_restaurants(
@@ -217,8 +271,10 @@ def transition(dialogue, dialogue_act, user_text=""):
         #return recommendation
         return remember_last_response(
             dialogue,
-            f"I would recommend {restaurant["restaurantname"]} which is located in the {restaurant["area"]}. \n"
-            f"the price range is {restaurant["pricerange"]} and it is an {restaurant["food"]} restaurant. \n"
+            
+            f"I would recommend {restaurant['restaurantname']} which is located in the {restaurant['area']}. \n"
+
+            f"the price range is {restaurant['pricerange']} and it is an {restaurant['food']} restaurant. \n"
         )
         
         
@@ -264,8 +320,8 @@ def transition(dialogue, dialogue_act, user_text=""):
                 #return updated recommendation
                 return remember_last_response(
                     dialogue,
-                    f"I would recommend {restaurant["restaurantname"]} which is located in the {restaurant["area"]}. \n"
-                    f"the price range is {restaurant["pricerange"]} and it is an {restaurant["food"]} restaurant. \n"
+                    f"I would recommend {restaurant['restaurantname']} which is located in the {restaurant['area']}. \n"
+                    f"the price range is {restaurant['pricerange']} and it is an {restaurant['food']} restaurant. \n"
                 )
         
         #handle a request for another restaurant
@@ -288,45 +344,11 @@ def transition(dialogue, dialogue_act, user_text=""):
             #again, return recommendation
             return remember_last_response(
                         dialogue,
-                        f"I would recommend {restaurant["restaurantname"]} which is located in the {restaurant["area"]}. \n"
-                        f"the price range is {restaurant["pricerange"]} and it is an {restaurant["food"]} restaurant. \n"
+                        f"I would recommend {restaurant['restaurantname']} which is located in the {restaurant['area']}. \n"
+                        f"the price range is {restaurant['pricerange']} and it is an {restaurant['food']} restaurant. \n"
                     )
         
-        #add all contact details if they are in the users request
-        users_requests = []
         
-        if ("phone" in text or "number" in text or "telephone" in text):
-            users_requests.append(("phone", "phone number"))
-        if "address" in text:
-            users_requests.append(("addr", "adress"))
-        if ("post code" in text or "postcode" in text or "postal code" in text):
-            users_requests.append(("postcode", "postcode"))
-        
-        #now start making the answers for the users request
-        if users_requests:
-            #first handle the case when there is no recommendation for the request
-            restaurant = dialogue["restaurant"]
-            if restaurant is None:
-                return remember_last_response(
-                    dialogue,
-                    "There is no recommendation. \n"
-                    "Please change one of the preferences"
-                )
-            
-            responses_to_request = []
-            #Add description to responses and put "unknown" if it is not there    
-            for request, description in users_requests:
-                answer = restaurant.get(request) or "unknown"
-                responses_to_request.append(
-                    f"the {description} of the restaurant {restaurant["restaurantname"]} "
-                    f"is: {answer}"
-                )
-            #return the answers to the details of the restaurant
-            #this way multiple requests at once are handled
-            return remember_last_response(
-                dialogue,
-                "".join(responses_to_request)
-            )
         
         return remember_last_response(
             dialogue,
