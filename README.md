@@ -13,6 +13,6 @@ You get 4 choices when running the main. In these choices you can decide
 - which classifier
 - if want to use dev set or test set --> So for grader: choose B in the third choice for test set
 At the end of training, you can give an input utterance
-- if the previous choice was A (train and evaluate on local validation), the next choice is for a conversation. Either A classifying utterances or B run the restaurant dialogue
+- if the previous choice was A (train and evaluate on local validation), the next choice is for a conversation. Either A classifying utterances or B run the restaurant dialogueod
 
 The results for the dev training are already stored in evaluation_results.txt
