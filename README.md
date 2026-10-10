@@ -16,3 +16,7 @@ At the end of training, you can give an input utterance
 - if the previous choice was A (train and evaluate on local validation), the next choice is for a conversation. Either A classifying utterances or B run the restaurant dialogueod
 
 The results for the dev training are already stored in evaluation_results.txt
+
+TRAINING:
+To start the restaurant dialogue using a previously saved model without repeating the full training and evaluation pipeline, run: python main.py --dialogue-only
+Choose the feature extraction method and classifier you want to use. The system loads the corresponding saved model and starts the interactive dialogue.

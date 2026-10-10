@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import joblib
 
 # Import the functions from other modules
 from data_loader import load_data, create_original_split, create_grouped_split
@@ -83,7 +84,45 @@ def interactive_dialogue(model, feature_extractor, model_type):
        
         print(response)
 
-def main(train_path, test_path):
+def main(train_path, test_path, dialogue_only=False):
+
+    #testing mode: load a saved model and start the dialogue
+    if dialogue_only:
+        print("Choose the saved feature extraction method:")
+        print("A = TF-IDF")
+        print("B = DistilBERT")
+        feature_choice = input("Type A or B: ").strip().upper()
+
+        model_type = "tfidf" if feature_choice == "A" else "distilbert"
+
+        print("Choose the saved classifier:")
+        print("A = SVM")
+        print("B = Logistic Regression")
+        classifier_choice = input("Type A or B: ").strip().upper()
+
+        classifier_name = (
+            "SVM" if classifier_choice == "A"
+            else "Logistic Regression"
+        )
+        classifier_file = classifier_name.lower().replace(" ", "_")
+
+        filename = f"original_{model_type}_{classifier_file}.joblib"
+        artifact_path = os.path.join("saved_models", filename)
+
+        if not os.path.exists(artifact_path):
+            print("Saved model not found.")
+            print("Run the full training pipeline first, with this model selected.")
+            return
+
+        saved = joblib.load(artifact_path)
+
+        print("Loaded saved model. Starting dialogue...")
+        interactive_dialogue(
+            saved["model"],
+            saved["extractor"],
+            saved["model_type"],
+        )
+        return
     
     #Choose extraction method
     print("Choose feature extraction method:")
@@ -170,6 +209,25 @@ def main(train_path, test_path):
             if "Logistic Regression" in classifiers_to_run:
                 trained_models["Logistic Regression"] = train_logistic_regression(X_train_features, y_train)
 
+            #save the models from the original split for later testing the dialogue
+            if split_name == "original split (85/15)":
+                os.makedirs("saved_models", exist_ok=True)
+
+                for classifier, model in trained_models.items():
+                    filename = (
+                        f"original_{current_model_type}_"
+                        f"{classifier.lower().replace(' ', '_')}.joblib"
+                    )
+
+                    joblib.dump(
+                        {
+                            "model": model,
+                            "extractor": active_extractor,
+                            "model_type": current_model_type,
+                        },
+                        os.path.join("saved_models", filename),
+                    )
+
             for classifier, model in trained_models.items(): #looks at all trained models and evaluates
                 predictions = model.predict(X_test_features) 
                 evaluation = f"{current_model_type.upper()} + {classifier} ({split_name})"
@@ -201,5 +259,12 @@ if __name__ == "__main__":
         type=str, 
         default= TEST_DATA_PATH,
     )
+
+    parser.add_argument(
+        "--dialogue-only",
+        action="store_true",
+        help="Load a saved model and start the dialogue without training",
+    )
+
     args = parser.parse_args()
-    main(args.train_data, args.test_data)
+    main(args.train_data, args.test_data, args.dialogue_only)
