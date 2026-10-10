@@ -15,8 +15,9 @@ def create_dialogue():
             "pricerange": None,
             "area": None
         },
-        "extra_requirements": {},
+        "extra_requirements": {},  #if extra requirements asked
         "restaurant": None,
-        "current_slot": None,
-        "last_system_response": "",
+        "current_slot": None, 
+        "last_system_response": "", #if user asks to repeat
+        "remaining_restaurants": [] #store unused matches when user wants another recommendation
     }

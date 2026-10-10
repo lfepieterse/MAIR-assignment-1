@@ -61,9 +61,9 @@ def update_preferences(dialogue, user_text):
     return extracted
 
 
-#remember the last response of the system
+#remember the last response of the system if the user asks to repeat
 def remember_last_response(dialogue, response):
-    dialogue["last_system_response"] == response
+    dialogue["last_system_response"] = response
     return dialogue["state"], response
 
 
@@ -76,7 +76,7 @@ def transition(dialogue, dialogue_act, user_text=""):
 
         return remember_last_response( 
             dialogue,
-            "Hello! You can ask me for restaurants by food type, "
+            "Hello! You can ask me for restaurants by food type, \n"
             "price range, or area. What are you looking for?"
         )
 
@@ -117,7 +117,7 @@ def transition(dialogue, dialogue_act, user_text=""):
 
         return remember_last_response(
             dialogue,
-            "Do you have any extra requirements, such as wanting "
+            "Do you have any extra requirements, such as wanting \n"
             "a romantic restaurant or one suitable for children?"
         )
 
@@ -125,12 +125,14 @@ def transition(dialogue, dialogue_act, user_text=""):
     if dialogue["state"] == ASK_EXTRA_REQUIREMENTS:
         text = user_text.lower().strip()
         
+        #Need to implement this
         if text != "no":
             return remember_last_response(
                 dialogue,
                 "not yet implemented (so answer no for extra requirements)"
             )
-            
+         
+        #If no restaurant found for recommendation yet   
         matches = find_matching_restaurants(
             dialogue["restaurants"],
             dialogue["preferences"]
@@ -141,34 +143,146 @@ def transition(dialogue, dialogue_act, user_text=""):
             dialogue["preferences"]["food"] = None
             dialogue["current_slot"] = "food"
             
+            #if no match for a restaurant
             return remember_last_response(
                 dialogue,
-                "Those preferences are not matches by any of the restaurants"
+                "Those preferences are not matches by any of the restaurants \n"
                 "What other type of food would be to your liking"
             )
+        #choose one of the matching restaurants randomly
         restaurant = random.choice(matches)
         dialogue["restaurant"] = restaurant
+        #store all other not randomly picked restaurants so they can be picked as alternatives
+        remaining_restaurants = []
+        for possibilities in matches:
+            if possibilities["restaurantname"] != restaurant["restaurantname"]:
+                remaining_restaurants.append(possibilities)
+        dialogue["remaining_restaurants"] = remaining_restaurants
+        
+        #change state if restaurant is picked
         dialogue["state"] = RECOMMEND
+        
+        #return recommendation
         return remember_last_response(
             dialogue,
-            f"I would recommend {restaurant["restaurantname"]},"
-            f"the pricerange is {restaurant["pricerange"]}"
-            f"and it is {restaurant["food"]}"
-            f"located in the {restaurant["area"]}"
+            f"I would recommend {restaurant["restaurantname"]} which is located in the {restaurant["area"]}. \n"
+            f"the price range is {restaurant["pricerange"]} and it is an {restaurant["food"]} restaurant. \n"
         )
         
-        return remember_last_response(
-            dialogue,
-            "Please tell me your extra requirements, or say no "
-            "if you don't have any."
-        )
         
     if dialogue["state"] == RECOMMEND:
-        remember_last_response(
+        restaurant = dialogue["restaurant"]
+        text = user_text.lower().strip()
+        
+        #first see if preferences change --> added because 20 reference dialogs do this
+        if dialogue_act in {"inform", "reqalts", "reqmore"}:
+            extracted = extract_slots(user_text, ONTOLOGY, current_slot=None)
+            changed_list = []
+            for slot, value in extracted.items():
+                if dialogue["preferences"][slot] != value:
+                    changed_list.append(dialogue["preferences"][slot])
+            #changed is true only if any changes have been made in preference
+            changed = len(changed_list) > 0 
+            
+            #and if there have been made changes make new list of 
+            # restaurants and remaining restaurants 
+            if changed:
+                dialogue["preferences"].update(extracted)
+                matches = find_matching_restaurants(dialogue["restaurants"], dialogue["preferences"])
+                
+                dialogue["restaurant"]=None
+                dialogue["remaining_restaurants"] = []
+                #if no matches for nu preference, let user type new preference
+                if not matches:
+                    return remember_last_response(
+                                dialogue,
+                                "Those new preferences are not matches by any of the restaurants \n"
+                                "Please change, food, area, or price range"
+                            )
+                #choose a random restaurant from the matches again 
+                # and put the rest in remaining_restaurants
+                restaurant = random.choice(matches)
+                dialogue["restaurant"] = restaurant
+                remaining_restaurants = []
+                for possibilities in matches:
+                    if possibilities["restaurantname"] != restaurant["restaurantname"]:
+                        remaining_restaurants.append(possibilities)
+                dialogue["remaining_restaurants"] = remaining_restaurants
+                
+                #return updated recommendation
+                return remember_last_response(
+                    dialogue,
+                    f"I would recommend {restaurant["restaurantname"]} which is located in the {restaurant["area"]}. \n"
+                    f"the price range is {restaurant["pricerange"]} and it is an {restaurant["food"]} restaurant. \n"
+                )
+        
+        #handle a request for another restaurant
+        if dialogue_act in {"reqalts", "reqmore"}: 
+            rest = dialogue["remaining_restaurants"]
+            #handle the case when there is no other restaurant match for the preferences
+            if not rest:
+                return remember_last_response(
+                    dialogue,
+                    "There are no other restaurants which match \n"
+                    "your current preferences"
+                )
+            #choose another restaurant from the remaining matches randomly 
+            #and remove that recommendation from the remaining restaurants
+            restaurant = random.choice(rest)
+            rest.remove(restaurant)
+            
+            dialogue["restaurant"] = restaurant
+            
+            #again, return recommendation
+            return remember_last_response(
+                        dialogue,
+                        f"I would recommend {restaurant["restaurantname"]} which is located in the {restaurant["area"]}. \n"
+                        f"the price range is {restaurant["pricerange"]} and it is an {restaurant["food"]} restaurant. \n"
+                    )
+        
+        #add all contact details if they are in the users request
+        users_requests = []
+        
+        if ("phone" in text or "number" in text or "telephone" in text):
+            users_requests.append(("phone", "phone number"))
+        if "address" in text:
+            users_requests.append(("addr", "adress"))
+        if ("post code" in text or "postcode" in text or "postal code" in text):
+            users_requests.append(("postcode", "postcode"))
+        
+        #now start making the answers for the users request
+        if users_requests:
+            #first handle the case when there is no recommendation for the request
+            restaurant = dialogue["restaurant"]
+            if restaurant is None:
+                return remember_last_response(
+                    dialogue,
+                    "There is no recommendation. \n"
+                    "Please change one of the preferences"
+                )
+            
+            responses_to_request = []
+            #Add description to responses and put "unknown" if it is not there    
+            for request, description in users_requests:
+                answer = restaurant.get(request) or "unknown"
+                responses_to_request.append(
+                    f"the {description} of the restaurant {restaurant["restaurantname"]} "
+                    f"is: {answer}"
+                )
+            #return the answers to the details of the restaurant
+            #this way multiple requests at once are handled
+            return remember_last_response(
+                dialogue,
+                "".join(responses_to_request)
+            )
+        
+        return remember_last_response(
             dialogue,
-            "Say goodbye if you want to restart this conversation."
+            "You can ask for the details of the phone number, \n"
+            "address or postcode. or say goodbye"
         )
 
+    #Last resort
     return remember_last_response(
         dialogue,
         "I'm sorry, I didn't understand that."
