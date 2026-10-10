@@ -49,6 +49,7 @@ def interactive(trained_models, feature_extractor, model_type):
 #for 1b
 def interactive_dialogue(model, feature_extractor, model_type):
     dialogue = create_dialogue()
+    dialogue["fallback_method"] = "levenshtein" #because semantic matching does not exist yet
     
     dialogue["restaurants"] = load_restaurants(
         "./data/restaurant_info.csv"
@@ -77,6 +78,8 @@ def interactive_dialogue(model, feature_extractor, model_type):
             dialogue_act,
             user_text
         )
+        print("DEBUG preferences:", dialogue["preferences"])
+        print("DEBUG current slot:", dialogue["current_slot"])
         print(response)
 
 def main(train_path, test_path):

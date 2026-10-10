@@ -1,4 +1,5 @@
 import random
+import re
 
 from dialogue_state import(
     GREET,
@@ -6,9 +7,10 @@ from dialogue_state import(
     ASK_EXTRA_REQUIREMENTS,
     END,
     RECOMMEND,
+    CONFIRM_PREFERENCE,
     create_dialogue
 )
-from slot_extraction import ONTOLOGY, extract_slots
+from slot_extraction import ONTOLOGY, extract_slots, suggest_correction, find_possible_misspellings
 from restaurant_repository import find_matching_restaurants
 
 
@@ -41,7 +43,7 @@ def ask_for_missing_preference(dialogue):
         return None
 
     #pick 1 of the missing preferences
-    slot = random.choice(missing)
+    slot = missing[0]
     dialogue["current_slot"] = slot
     
     return QUESTIONS[slot]
@@ -100,12 +102,62 @@ def transition(dialogue, dialogue_act, user_text=""):
         dialogue["restaurants"] = restaurants
         return transition(dialogue, "Hello again")
 
+    if dialogue["state"] == CONFIRM_PREFERENCE:
+        text = user_text.lower().strip()
+        #if user confirms the correction, store the correction
+        if dialogue_act == "affirm" or text == "yes":
+            pending = dialogue["pending_correction"]
+            #substitute the new value for food, price or area
+            dialogue["preferences"][pending["slot"]] = pending["value"]
+        #if user does not affirm the correction, preferences stay the same
+        elif dialogue_act == "negate" or text == "no":
+            pass
+        #Let user say yes or no
+        else:
+            return remember_last_response(
+                dialogue,
+                "Please say yes or no to confirm or deny"
+            )
+        #set pending correction to none and state to collect preferences
+        dialogue["pending_correction"] = None
+        dialogue["state"] = COLLECT_PREFERENCES
+        
+        #No returning value, because going into next state of collect_preference after this
+        #"ack" so it is not treated as a preference
+        dialogue_act = "ack"
+        user_text = ""
+        
+    
     #collect preferences
     if dialogue["state"] == COLLECT_PREFERENCES:
         if dialogue_act in {"inform", "hello", "reqalts", "confirm"}:
             #make sure users answer is stored before asking anything so questions are not repeated
-            update_preferences(dialogue, user_text)
-        
+            extracted = update_preferences(dialogue, user_text)
+            
+            #This part handles misspellings
+            #find a keyword match using the function from slot_extraction.py
+            possibilities = find_possible_misspellings(user_text, dialogue["current_slot"])
+            
+            for slot, possibility in possibilities.items():
+                #skip the slots that are already matched
+                if slot in extracted:
+                    continue
+                correction = suggest_correction(possibility, ONTOLOGY[slot])
+                
+                #if there is a correction possibility, this value is stored 
+                # before being confirmed. by user
+                if correction is not None:
+                    dialogue["pending_scorrection"] = {"slot": slot, "value": correction}
+                    dialogue["state"] = CONFIRM_PREFERENCE
+                    
+                    #here the confirmation question is stored as last response
+                    return remember_last_response(
+                        dialogue,
+                        f"Did you mean {correction} for {slot}?"
+                    )
+            
+            
+        #if no correction question was returned continue normally
         question = ask_for_missing_preference(dialogue)
 
         if question is not None:

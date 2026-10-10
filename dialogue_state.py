@@ -6,6 +6,7 @@ COLLECT_EXTRA_REQUIREMENTS = "collect_extra_requirements"
 PROVIDE_DETAILS = "provide_details"
 RECOMMEND = "recommend"
 END = "end"
+CONFIRM_PREFERENCE = "confirm_preference"
 
 def create_dialogue():
     return {
@@ -19,5 +20,6 @@ def create_dialogue():
         "restaurant": None,
         "current_slot": None, 
         "last_system_response": "", #if user asks to repeat
-        "remaining_restaurants": [] #store unused matches when user wants another recommendation
+        "remaining_restaurants": [], #store unused matches when user wants another recommendation
+        "pending_correction": None #whether there was a mispelling for which a correction needs approval
     }
