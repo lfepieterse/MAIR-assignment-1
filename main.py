@@ -55,8 +55,7 @@ def interactive_dialogue(model, feature_extractor, model_type):
     choice= input("Show reasoning explanations? Type yes or no:").strip().lower()
     while choice not in {"yes", "no"}:
         input("Type yes or no:").strip().lower()
-    if choice == "yes":
-        dialogue["show_reasoning"] = choice  #gets value True for "yes"
+    dialogue["show_reasoning"] = choice = "yes" #gets value True for "yes"
         
     dialogue["fallback_method"] = "levenshtein" #because semantic matching does not exist yet
     
