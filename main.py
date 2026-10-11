@@ -239,6 +239,32 @@ def main(train_path, test_path, dialogue_only=False):
                 predictions = model.predict(X_test_features) 
                 evaluation = f"{current_model_type.upper()} + {classifier} ({split_name})"
                 evaluate_test(split_test['label'], predictions, evaluation) #use evaluation on the trained models
+
+                
+                #CODE FOR SAVING THE MISCLASSIFIED UTTERANCES
+                wrong = split_test[["utterance", "label"]].copy()
+                wrong["predicted_label"] = predictions
+                wrong = wrong[wrong["label"] != wrong["predicted_label"]]
+
+                os.makedirs("results", exist_ok=True)
+
+                #names for model configuration choices
+                if choice3 == "B":
+                    split_id = "held_out"
+                elif "grouped" in split_name:
+                    split_id = "grouped"
+                else:
+                    split_id = "original"
+
+                what_classifier = classifier.lower().replace(" ", "_")
+                name_file = (
+                    f"results/errors_{split_id}_"
+                    f"{current_model_type}_{what_classifier}.csv"
+                )
+
+                wrong.to_csv(name_file, index=False)
+                print(f"The most common wrongly classified utterances are saved to {name_file}")
+                                
             
     if choice3 != "B":
         print("\nEnter A to classify utterances "
