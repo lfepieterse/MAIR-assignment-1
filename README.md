@@ -19,7 +19,7 @@ The results for the dev training are already stored in evaluation_results.txt
 
 TRAINING:
 To start the restaurant dialogue using a previously saved model without repeating the full training and evaluation pipeline, run: python main.py --dialogue-only
-Choose the feature extraction method and classifier you want to use. The system loads the corresponding saved model and starts the interactive dialogue.
+Choose the feature extraction method and classifier you want to use. The system loads the corresponding saved model and starts the interactive dialogue. For the restaurant recommendation dialogue of part 1b, we recommend using SVM with DistilBERT because it's performance proved best in pasr 1a of the assignment, but we justified this further in the report so please read about it further in there.
 
 reasoning component:
 reasoning.py
