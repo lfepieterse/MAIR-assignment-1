@@ -8,10 +8,138 @@ from dialogue_state import(
     END,
     RECOMMEND,
     CONFIRM_PREFERENCE,
+    RESOLVE_CONFLICT,
     create_dialogue
 )
 from slot_extraction import ONTOLOGY, extract_slots, suggest_correction, find_possible_misspellings
 from restaurant_repository import find_matching_restaurants
+from reasoning import infer_requirements
+
+#return requirements, explanations, & all conflicts
+
+def find_restaurant_conflict(restaurant):
+
+    requirements, explanations, conflicts = infer_requirements(restaurant)
+
+    return requirements, explanations, conflicts
+
+
+#ask user which option they prefer when a conflict occurss
+def make_conflict_question(property_name, values):
+
+    descriptions = {
+        "touristic": {
+            True: "a restaurant that attracts tourists",
+            False: "a restaurant that is non-tourist",
+        },
+        "assigned seats": {
+            True: "assigned seating",
+            False: "no assigned seating",
+        },
+        "children": {
+            True: "a restaurant suitable for children",
+            False: "a restaurant less suitable for children",
+        },
+        "romantic": {
+            True: "a romantic restaurant",
+            False: "a less romantic restaurant",
+        },
+    }
+
+    first_option = descriptions[property_name][values[0]]
+    second_option = descriptions[property_name][values[1]]
+
+    return (
+        f"The rules give conflicting conclusions about {property_name}. "
+        f"One suggests {first_option}, while the other suggests "
+        f"{second_option}. Which would you prefer for this restaurant? "
+        f"Please choose between '{first_option}' and '{second_option}'."
+    )
+
+
+#store the conflicts & ask user aboutt the first conflict
+def start_conflict_resolution(dialogue, restaurant, requirements, explanations, conflicts):
+
+    dialogue["restaurant"] = restaurant
+    dialogue["pending_conflicts"] = list(conflicts.items())
+    dialogue["conflict_resolutions"] = {}
+    dialogue["reasoning_explanations"] = explanations
+    dialogue["inferred_requirements"] = requirements
+
+    property_name, values = dialogue["pending_conflicts"].pop(0)
+    dialogue["pending_conflict_property"] = property_name
+    dialogue["pending_conflict_restaurant"] = restaurant
+
+    dialogue["state"] = RESOLVE_CONFLICT
+
+    return remember_last_response(
+        dialogue,
+        make_conflict_question(property_name, values)
+    )
+
+#check whether requirements match with user response:
+def matches_conflict_choices(requirements, conflict_resolutions):
+
+    for property_name, chosen_value in conflict_resolutions.items():
+        inferred_value = requirements.get(property_name)
+
+        #use selected preference of user
+        if inferred_value is not None and inferred_value != chosen_value:
+            return False
+
+    return True
+
+#another helper function to apply users conflict preferences
+def apply_conflict_choices(requirements, conflict_resolutions):
+
+    effective_requirements = requirements.copy()
+
+    for property_name, chosen_value in conflict_resolutions.items():
+        if effective_requirements.get(property_name) is None:
+            effective_requirements[property_name] = chosen_value
+
+    return effective_requirements
+
+#helper function to check whether a restaurant matches user requirements
+def matches_extra_requirements(restaurant, requirements):
+    for property_name, required_value in requirements.items():
+        #skip unconcluded
+        if required_value is None:
+            continue
+
+        #check the properties inferred from the rules
+        if property_name == "touristic":
+            price_range = restaurant.get("pricerange", "").lower()
+            food = restaurant.get("food", "").lower()
+            food_quality = restaurant.get("food quality", "").lower()
+
+            if required_value is True:
+                if not (price_range == "cheap" and food_quality == "good"):
+                    if food == "romanian":
+                        return False
+            elif food == "romanian":
+                return False
+
+        elif property_name == "assigned seats":
+            crowdedness = restaurant.get("crowdedness", "").lower()
+            if required_value is True and crowdedness != "busy":
+                return False
+
+        elif property_name == "children":
+            length_of_stay = restaurant.get("length of stay", "").lower()
+            if required_value is False and length_of_stay != "long":
+                return False
+
+        elif property_name == "romantic":
+            crowdedness = restaurant.get("crowdedness", "").lower()
+            length_of_stay = restaurant.get("length of stay", "").lower()
+
+            if required_value is True and crowdedness == "busy":
+                return False
+            if required_value is False and length_of_stay == "long":
+                return False
+
+    return True
 
 
 QUESTIONS = {
@@ -137,6 +265,147 @@ def transition(dialogue, dialogue_act, user_text=""):
         dialogue["restaurants"] = restaurants
         return transition(dialogue, "hello", "Hello again")
 
+    
+    #handling of user response to an reasoning conflict
+    if dialogue["state"] == RESOLVE_CONFLICT:
+        text = user_text.lower().strip().rstrip(".,!?")
+        property_name = dialogue["pending_conflict_property"]
+
+        descriptions = {
+            "touristic": {
+                True: ("tourist", "attracts tourists"),
+                False: ("non-tourist", "not tourist", "less tourist"),
+            },
+            "assigned seats": {
+                True: ("assigned seating", "assigned seats"),
+                False: ("no assigned seating", "without assigned seats"),
+            },
+            "children": {
+                True: ("suitable for children", "good for children"),
+                False: ("less suitable for children", "not suitable for children"),
+            },
+            "romantic": {
+                True: ("romantic",),
+                False: ("less romantic", "non-romantic", "not romantic"),
+            },
+        }
+
+        chosen_value = None
+
+        #check for negative options to avoid matching part of a phrase (eg "less romantic" vs "romantic"))
+        for value in (False, True):
+            phrases = descriptions[property_name][value]
+            if any(phrase in text for phrase in phrases):
+                chosen_value = value
+                break
+
+        if chosen_value is None:
+            return remember_last_response(
+                dialogue,
+                "Please choose one of the two options in my previous question."
+            )
+
+        #get the user response for this restaurant
+        dialogue["conflict_resolutions"][property_name] = chosen_value
+
+        #ask about next conflict if there remains one
+        if dialogue["pending_conflicts"]:
+            next_property, next_values = dialogue["pending_conflicts"].pop(0)
+            dialogue["pending_conflict_property"] = next_property
+
+            return remember_last_response(
+                dialogue,
+                make_conflict_question(next_property, next_values)
+            )
+
+        #when all conflicts for this restaurant have been addressed
+        restaurant = dialogue["pending_conflict_restaurant"]
+        explanations = dialogue.get("reasoning_explanations", [])
+
+        dialogue["pending_conflict_property"] = None
+        dialogue["pending_conflict_restaurant"] = None
+        
+        #apply the user responses
+        requirements = apply_conflict_choices(
+            dialogue["inferred_requirements"],
+            dialogue["conflict_resolutions"]
+        )
+        
+        dialogue["inferred_requirements"] = requirements
+        
+        #keep the restaurant whose reasoning conflict the user resolved
+        dialogue["restaurant"] = restaurant
+
+        #store other restaurants that match the basic preferences
+        matching_restaurants = [
+            candidate
+            for candidate in dialogue["restaurants"]
+            if all(
+                candidate.get(slot) == value
+                for slot, value in dialogue["preferences"].items()
+                if value is not None and value != "dontcare"
+            )
+            and candidate["restaurantname"] != restaurant["restaurantname"]
+        ]
+
+        dialogue["matching_restaurants"] = matching_restaurants
+        dialogue["remaining_restaurants"] = matching_restaurants.copy()
+        dialogue["state"] = RECOMMEND
+                
+        #remove explanations belonging to rules with conflicting conclusions
+        conflicting_explanations = {
+            "touristic": [
+                "The restaurant is cheap and has good food, which suggests it attracts tourists.",
+                "Romanian cuisine is considered less familiar to most tourists.",
+            ],
+            "romantic": [
+                "The restaurant is busy, which suggests it is not romantic.",
+                "A long stay is considered romantic.",
+            ],
+        }
+
+        explanation_parts = [
+            item
+            for item in explanations
+            if not any(
+                item == conflicting_explanation
+                for property_name in dialogue["conflict_resolutions"]
+                for conflicting_explanation in conflicting_explanations.get(
+                    property_name, []
+                )
+            )
+        ]
+
+        explanation = " ".join(explanation_parts)
+
+        #explain to user how user response resolved conflicts
+        choice_explanations = {
+            "touristic": {
+                True: "You chose for a restaurant that attracts tourists.",
+                False: "You chose the restaurant that is less likely to attract tourists.",
+            },
+            "romantic": {
+                True: "You chose the restaurant as romantic.",
+                False: "You chose the restaurant as less romantic.",
+            },
+        }
+
+        for property_name, chosen_value in dialogue["conflict_resolutions"].items():
+            explanation += " " + choice_explanations[property_name][chosen_value]
+
+
+        return remember_last_response(
+            dialogue,
+            f"Thank you. I've recorded your choices for "
+            f"{restaurant['restaurantname']}. {explanation} "
+            f"I would recommend {restaurant['restaurantname']}, "
+            f"located in the {restaurant['area']}. "
+            f"The price range is {restaurant['pricerange']}, "
+            f"and it is a {restaurant['food']} restaurant."
+        )
+
+
+
     if dialogue["state"] == CONFIRM_PREFERENCE:
         text = user_text.lower().strip()
         #if user confirms the correction, store the correction
@@ -208,17 +477,12 @@ def transition(dialogue, dialogue_act, user_text=""):
             "a romantic restaurant or one suitable for children?"
         )
 
+    
     #extra requirements
     if dialogue["state"] == ASK_EXTRA_REQUIREMENTS:
-        
-        text = user_text.lower().strip()
 
-        #remove the punctuation at the end
-        text = text.rstrip(".,!?")
+        text = user_text.lower().strip().rstrip(".,!?")
 
-        
-        
-        #when the user has no extra requirements
         no_extra_requirements = {
             "no",
             "no thanks",
@@ -237,45 +501,74 @@ def transition(dialogue, dialogue_act, user_text=""):
                 "or say 'no' if you don't."
             )
 
-         
-        #If no restaurant found for recommendation yet   
+        #find restaurants that match with the users basic preferences
         matches = find_matching_restaurants(
             dialogue["restaurants"],
             dialogue["preferences"]
         )
+
         if not matches:
             dialogue["restaurant"] = None
             dialogue["state"] = COLLECT_PREFERENCES
             dialogue["preferences"]["food"] = None
             dialogue["current_slot"] = "food"
-            
-            #if no match for a restaurant
+
             return remember_last_response(
                 dialogue,
-                "Those preferences are not matches by any of the restaurants \n"
-                "What other type of food would be to your liking"
+                "No restaurants match those preferences. "
+                "What other type of food would you like?"
             )
-        #choose one of the matching restaurants randomly
+
+        #check each matching restaurant for reasoning conflicts
+        conflict_candidates = []
+
+        for candidate in matches:
+            requirements, explanations, conflicts = find_restaurant_conflict(candidate)
+
+            if conflicts:
+                conflict_candidates.append(
+                    (candidate, requirements, explanations, conflicts)
+                )
+
+        #if any candidates have conflicts, ask about the first one
+        if conflict_candidates:
+            candidate, requirements, explanations, conflicts = random.choice(
+                conflict_candidates
+            )
+
+            #keep other matches available for later recommendations
+            dialogue["remaining_restaurants"] = [
+                r for r in matches
+                if r["restaurantname"] != candidate["restaurantname"]
+            ]
+
+            return start_conflict_resolution(
+                dialogue,
+                candidate,
+                requirements,
+                explanations,
+                conflicts
+            )
+
+        #no conflicts: recommend some random matching restaurant
         restaurant = random.choice(matches)
         dialogue["restaurant"] = restaurant
-        #store all other not randomly picked restaurants so they can be picked as alternatives
-        remaining_restaurants = []
-        for possibilities in matches:
-            if possibilities["restaurantname"] != restaurant["restaurantname"]:
-                remaining_restaurants.append(possibilities)
-        dialogue["remaining_restaurants"] = remaining_restaurants
-        
-        #change state if restaurant is picked
+
+        dialogue["remaining_restaurants"] = [
+            r for r in matches
+            if r["restaurantname"] != restaurant["restaurantname"]
+        ]
+
         dialogue["state"] = RECOMMEND
-        
-        #return recommendation
+
         return remember_last_response(
             dialogue,
-            
-            f"I would recommend {restaurant['restaurantname']} which is located in the {restaurant['area']}. \n"
-
-            f"the price range is {restaurant['pricerange']} and it is an {restaurant['food']} restaurant. \n"
+            f"I would recommend {restaurant['restaurantname']}, "
+            f"located in the {restaurant['area']}. "
+            f"The price range is {restaurant['pricerange']}, "
+            f"and it is a {restaurant['food']} restaurant."
         )
+
         
         
     if dialogue["state"] == RECOMMEND:

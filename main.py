@@ -55,8 +55,8 @@ def interactive_dialogue(model, feature_extractor, model_type):
     
     
     dialogue["restaurants"] = load_restaurants(
-        "./data/restaurant_info.csv"
-    ) 
+    "./data/restaurant_info_extended.csv"
+)
     
     _, response = transition(dialogue, "hello")
     print(response)

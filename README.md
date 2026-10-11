@@ -20,3 +20,8 @@ The results for the dev training are already stored in evaluation_results.txt
 TRAINING:
 To start the restaurant dialogue using a previously saved model without repeating the full training and evaluation pipeline, run: python main.py --dialogue-only
 Choose the feature extraction method and classifier you want to use. The system loads the corresponding saved model and starts the interactive dialogue.
+
+reasoning component:
+reasoning.py
+
+Applies six rules to infer additional restaurant properties, such as whether a restaurant is touristic, has assigned seating, is suitable for children, or is romantic. It stores explanations for triggered rules and detects conflicting conclusions, which are returned to the dialogue manager for handling.

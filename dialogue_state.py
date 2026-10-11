@@ -7,6 +7,7 @@ PROVIDE_DETAILS = "provide_details"
 RECOMMEND = "recommend"
 END = "end"
 CONFIRM_PREFERENCE = "confirm_preference"
+RESOLVE_CONFLICT = "resolve_conflict"
 
 def create_dialogue():
     return {
@@ -21,5 +22,11 @@ def create_dialogue():
         "current_slot": None, 
         "last_system_response": "", #if user asks to repeat
         "remaining_restaurants": [], #store unused matches when user wants another recommendation
-        "pending_correction": None #whether there was a mispelling for which a correction needs approval
+        "pending_correction": None, #whether there was a mispelling for which a correction needs approval
+        
+        #track conflicts
+        "pending_conflicts": [],
+        "pending_conflict_restaurant": None,
+        "pending_conflict_property": None,
+        "conflict_resolutions": {}
     }
