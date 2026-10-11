@@ -314,7 +314,7 @@ def transition(dialogue, dialogue_act, user_text=""):
     if dialogue_act == "restart":
         restaurants = dialogue["restaurants"]
         show_reasoning = dialogue["show_reasoning"] #did user choose reasoning or not
-        fallback_method = dialogue["fallback_method", "Levenshtein"] #if spelling mistakes
+        fallback_method = dialogue.get("fallback_method", "Levenshtein") #if spelling mistakes
         dialogue.clear()
         dialogue.update(create_dialogue())
         dialogue["restaurants"] = restaurants
@@ -665,14 +665,10 @@ def transition(dialogue, dialogue_act, user_text=""):
         ]
 
         dialogue["state"] = RECOMMEND
-
-        return remember_last_response(
-            dialogue,
-            f"I would recommend {restaurant['restaurantname']}, "
-            f"located in the {restaurant['area']}. "
-            f"The price range is {restaurant['pricerange']}, "
-            f"and it is a {restaurant['food']} restaurant."
-        )
+        #now make sure it also works for explanations etc.
+        requirements, explanations, conflicts= infer_requirements(restaurant) 
+        explanation = " ".join(explanations)
+        return response_for_recommendation(dialogue, restaurant, explanation)
 
         
         
