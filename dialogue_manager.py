@@ -195,6 +195,20 @@ def remember_last_response(dialogue, response):
     dialogue["last_system_response"] = response
     return dialogue["state"], response
 
+#this just helps to generate the response for when explanations are asked
+def response_for_recommendation(dialogue, restaurant, explanation):
+    response = (
+        f"I would recommend {restaurant['restaurantname']}, "
+        f"located in the {restaurant['area']}. "
+        f"The price range is {restaurant['pricerange']}, "
+        f"and it is a {restaurant['food']} restaurant."
+    )
+    #if show reasoning is True, make sure the explanation is added to the recommendation
+    if dialogue["show_reasoning"] and explanation:
+        response += " " + explanation
+    
+    return remember_last_response(dialogue, response)
+    
 
 def transition(dialogue, dialogue_act, user_text=""):
     state = dialogue["state"]
@@ -256,12 +270,16 @@ def transition(dialogue, dialogue_act, user_text=""):
             dialogue["last_system_response"]
         )
     
-    #if restarting, keep the loaded restaurants
+    #if restarting, keep configuration the same 
     if dialogue_act == "restart":
         restaurants = dialogue["restaurants"]
+        show_reasoning = dialogue["show_reasoning"] #did user choose reasoning or not
+        fallback_method = dialogue["fallback_method", "Levenshtein"] #if spelling mistakes
         dialogue.clear()
         dialogue.update(create_dialogue())
         dialogue["restaurants"] = restaurants
+        dialogue["show_reasoning"] = show_reasoning
+        dialogue["fallback_method"] = fallback_method
         return transition(dialogue, "hello", "Hello again")
 
     
@@ -393,15 +411,7 @@ def transition(dialogue, dialogue_act, user_text=""):
             explanation += " " + choice_explanations[property_name][chosen_value]
 
 
-        return remember_last_response(
-            dialogue,
-            f"Thank you. I've recorded your choices for "
-            f"{restaurant['restaurantname']}. {explanation} "
-            f"I would recommend {restaurant['restaurantname']}, "
-            f"located in the {restaurant['area']}. "
-            f"The price range is {restaurant['pricerange']}, "
-            f"and it is a {restaurant['food']} restaurant."
-        )
+        return response_for_recommendation(dialogue, restaurant, explanation)
 
 
 
