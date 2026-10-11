@@ -50,9 +50,8 @@ def make_conflict_question(property_name, values):
     second_option = descriptions[property_name][values[1]]
 
     return (
-        f"The rules give conflicting conclusions about {property_name}. "
-        f"One suggests {first_option}, while the other suggests "
-        f"{second_option}. Which would you prefer for this restaurant? "
+        f"Hmm, the restaurants I have in mind are somewhat conflicted about being {property_name}. "
+        f"Which option would you prefer for this restaurant? "
         f"Please choose between '{first_option}' and '{second_option}'."
     )
 
