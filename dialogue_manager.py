@@ -100,45 +100,85 @@ def apply_conflict_choices(requirements, conflict_resolutions):
     return effective_requirements
 
 #helper function to check whether a restaurant matches user requirements
+
 def matches_extra_requirements(restaurant, requirements):
+
+    inferred_requirements, explanations, conflicts = infer_requirements(restaurant)
+
     for property_name, required_value in requirements.items():
-        #skip unconcluded
         if required_value is None:
             continue
 
-        #check the properties inferred from the rules
-        if property_name == "touristic":
-            price_range = restaurant.get("pricerange", "").lower()
-            food = restaurant.get("food", "").lower()
-            food_quality = restaurant.get("food quality", "").lower()
+        #if the rules contradict each other -->do not reject the restaurant yet
+        #dialogue can ask the user to resolve this conflict
+        if property_name in conflicts:
+            continue
 
-            if required_value is True:
-                if not (price_range == "cheap" and food_quality == "good"):
-                    if food == "romanian":
-                        return False
-            elif food == "romanian":
-                return False
+        #known conclusion must agree with users preferrence
+        inferred_value = inferred_requirements.get(property_name)
 
-        elif property_name == "assigned seats":
-            crowdedness = restaurant.get("crowdedness", "").lower()
-            if required_value is True and crowdedness != "busy":
-                return False
+        if inferred_value is not None and inferred_value != required_value:
+            return False
 
-        elif property_name == "children":
-            length_of_stay = restaurant.get("length of stay", "").lower()
-            if required_value is False and length_of_stay != "long":
-                return False
-
-        elif property_name == "romantic":
-            crowdedness = restaurant.get("crowdedness", "").lower()
-            length_of_stay = restaurant.get("length of stay", "").lower()
-
-            if required_value is True and crowdedness == "busy":
-                return False
-            if required_value is False and length_of_stay == "long":
-                return False
+        #if no rule concludes anything about this property--> value is unknown (do not assume that unknown means unsuitable)
 
     return True
+
+
+
+
+#helper to identify extra restaurant requirements in user response
+
+def extract_extra_requirements(text):
+
+    text = text.lower().strip()
+    requirements = {}
+
+    #romantic
+    if any(phrase in text for phrase in [
+        "not romantic", "less romantic", "non-romantic",
+        "don't want a romantic", "do not want a romantic"
+    ]):
+        requirements["romantic"] = False
+    elif "romantic" in text:
+        requirements["romantic"] = True
+
+    #suitable for children
+    if any(phrase in text for phrase in [
+        "not suitable for children", "not good for children",
+        "not child-friendly", "no children"
+    ]):
+        requirements["children"] = False
+    elif any(phrase in text for phrase in [
+        "children", "child-friendly", "family-friendly"
+    ]):
+        requirements["children"] = True
+
+    #assigned seats
+    if any(phrase in text for phrase in [
+        "no assigned seats", "without assigned seats",
+        "no assigned seating"
+    ]):
+        requirements["assigned seats"] = False
+    elif any(phrase in text for phrase in [
+        "assigned seats", "assigned seating"
+    ]):
+        requirements["assigned seats"] = True
+
+    #touristic
+    if any(phrase in text for phrase in [
+        "not touristic", "non-touristic", "not touristy",
+        "non-touristy", "not a tourist"
+    ]):
+        requirements["touristic"] = False
+    elif any(phrase in text for phrase in [
+        "touristic", "touristy", "attracts tourists"
+    ]):
+        requirements["touristic"] = True
+
+    return requirements
+
+
 
 
 QUESTIONS = {
@@ -473,38 +513,78 @@ def transition(dialogue, dialogue_act, user_text=""):
         return remember_last_response(
             dialogue,
             "Do you have any extra requirements, such as wanting \n"
-            "a romantic restaurant or one suitable for children?"
+            "a romantic restaurant or one suitable for children? \n"
+            "Please enter YES or NO and I will further help you"
         )
 
     
     #extra requirements
     if dialogue["state"] == ASK_EXTRA_REQUIREMENTS:
 
+        
         text = user_text.lower().strip().rstrip(".,!?")
 
         no_extra_requirements = {
-            "no",
-            "no thanks",
-            "no thank you",
-            "i don't care",
-            "i dont care",
-            "no preference",
-            "none",
-            "not really"
+            "no", "no thanks", "no thank you",
+            "i don't care", "i dont care",
+            "no preference", "none", "not really"
         }
 
-        if text not in no_extra_requirements:
+        yes_answers = {"yes", "yes please", "yeah", "sure"}
+
+        #collect requirements if response =  yes
+        
+        #ask for details when user says yes
+        if text in {"yes", "yes please", "yeah", "sure"}:
+            dialogue["awaiting_extra_requirements"] = True
             return remember_last_response(
                 dialogue,
-                "Please say if you have any extra requirements, "
-                "or say 'no' if you don't."
+                "What extra requirements do you have? For example, "
+                "you can ask for a romantic restaurant or one suitable "
+                "for children. You can mention more than one."
             )
+
+
+        #user can skip extra requirements:
+        if text in no_extra_requirements:
+            dialogue["extra_requirements"] = {}
+            dialogue["awaiting_extra_requirements"] = False
+
+        else:
+            #accept requirements stated directly or after saying yes
+            requirements = extract_extra_requirements(text)
+
+            if not requirements:
+                return remember_last_response(
+                    dialogue,
+                    "Please tell me your extra requirements, such as "
+                    "'romantic' or 'suitable for children', or say 'no'."
+                )
+
+            #save the requirements for restaurant filtering
+            dialogue["extra_requirements"] = requirements
+            dialogue["awaiting_extra_requirements"] = False
+
 
         #find restaurants that match with the users basic preferences
         matches = find_matching_restaurants(
             dialogue["restaurants"],
             dialogue["preferences"]
         )
+
+        #apply extra requirements when required
+        extra_requirements = dialogue.get("extra_requirements", {})
+
+        if extra_requirements:
+            matches = [
+                restaurant
+                for restaurant in matches
+                if matches_extra_requirements(
+                    restaurant,
+                    extra_requirements
+                )
+            ]
+
 
         if not matches:
             dialogue["restaurant"] = None
@@ -522,20 +602,35 @@ def transition(dialogue, dialogue_act, user_text=""):
         conflict_candidates = []
 
         for candidate in matches:
-            requirements, explanations, conflicts = find_restaurant_conflict(candidate)
+            requirements, explanations, conflicts = find_restaurant_conflict(
+                candidate
+            )
 
+            #user preferences to resolve matching conflicts
+            for property_name, preferred_value in dialogue.get(
+                "extra_requirements", {}
+            ).items():
+
+                if property_name in conflicts:
+                    #user has already told which option they prefer
+                    requirements[property_name] = preferred_value
+                    conflicts.pop(property_name)
+
+            #ask the user only about conflicts they have not already resolved
             if conflicts:
                 conflict_candidates.append(
                     (candidate, requirements, explanations, conflicts)
                 )
 
-        #if any candidates have conflicts, ask about the first one
-        if conflict_candidates:
+
+        
+        #ask for reasoning conflicts only when the user has extra requirements
+        if dialogue.get("extra_requirements") and conflict_candidates:
             candidate, requirements, explanations, conflicts = random.choice(
                 conflict_candidates
             )
 
-            #keep other matches available for later recommendations
+            #keep other matching restaurants available for later
             dialogue["remaining_restaurants"] = [
                 r for r in matches
                 if r["restaurantname"] != candidate["restaurantname"]
@@ -548,6 +643,7 @@ def transition(dialogue, dialogue_act, user_text=""):
                 explanations,
                 conflicts
             )
+
 
         #no conflicts: recommend some random matching restaurant
         restaurant = random.choice(matches)
