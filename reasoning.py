@@ -24,7 +24,7 @@ def infer_requirements(restaurant):
         conclusions["touristic"].append(True)
         explanations.append(
             "The restaurant is cheap and has good food, "
-            "which suggests it attracts tourists."
+            "suggesting it attracts tourists."
         )
 
     if food == "romanian":

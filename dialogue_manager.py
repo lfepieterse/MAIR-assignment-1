@@ -50,9 +50,9 @@ def make_conflict_question(property_name, values):
     second_option = descriptions[property_name][values[1]]
 
     return (
-        f"Hmm, the restaurants I have in mind are somewhat conflicted about being {property_name}. "
-        f"Which option would you prefer for this restaurant? "
-        f"Please choose between '{first_option}' and '{second_option}'."
+        f"The available restaurants differ in their characteristics regarding {property_name}. "
+        f"Which option do you prefer? "
+        f"Choose between '{first_option}' and '{second_option}'."
     )
 
 
@@ -182,9 +182,9 @@ def extract_extra_requirements(text):
 
 
 QUESTIONS = {
-        "food": "What type of food would you like?",
+        "food": "What type of food do you prefer?",
         "pricerange": "What price range do you prefer: cheap, moderate, or expensive?",
-        "area": "Which area would you prefer: north, south, east, west, or centre?"
+        "area": "Which area do you prefer: north, south, east, west, or centre?"
 }
 
 
@@ -259,14 +259,14 @@ def transition(dialogue, dialogue_act, user_text=""):
 
         return remember_last_response( 
             dialogue,
-            "Hello! You can ask me for restaurants by food type, \n"
-            "price range, or area. What are you looking for?"
+            "I can help you find a restaurant based on food type, \n"
+            "price range, or area. Tell me your preferences."
         )
 
     #End conversation if the user says goodbye
     if dialogue_act == "bye":
         dialogue["state"] = END
-        return remember_last_response(dialogue, "Goodbye! Have a nice day.")
+        return remember_last_response(dialogue, "Bye.")
 
 
     #handle the contact detail requests
@@ -288,7 +288,7 @@ def transition(dialogue, dialogue_act, user_text=""):
             return remember_last_response(
                 dialogue,
                 "I can provide contact details after recommending a restaurant. "
-                "Let's first find one that matches your preferences."
+                "I first need to find one that matches your preferences."
             )
 
         responses_to_request = []
@@ -359,7 +359,7 @@ def transition(dialogue, dialogue_act, user_text=""):
         if chosen_value is None:
             return remember_last_response(
                 dialogue,
-                "Please choose one of the two options in my previous question."
+                "Choose one of the two options in my previous question."
             )
 
         #get the user response for this restaurant
@@ -438,12 +438,12 @@ def transition(dialogue, dialogue_act, user_text=""):
         #explain to user how user response resolved conflicts
         choice_explanations = {
             "touristic": {
-                True: "You chose for a restaurant that attracts tourists.",
+                True: "You chose a restaurant that attracts tourists.",
                 False: "You chose the restaurant that is less likely to attract tourists.",
             },
             "romantic": {
-                True: "You chose the restaurant as romantic.",
-                False: "You chose the restaurant as less romantic.",
+                True: "You chose the restaurant classified as romantic.",
+                False: "You chose the restaurant classified as less romantic.",
             },
         }
 
@@ -451,7 +451,19 @@ def transition(dialogue, dialogue_act, user_text=""):
             explanation += " " + choice_explanations[property_name][chosen_value]
 
 
+<<<<<<< HEAD
         return response_for_recommendation(dialogue, restaurant, explanation)
+=======
+        return remember_last_response(
+            dialogue,
+            f"I've recorded your choices for "
+            f"{restaurant['restaurantname']}. {explanation} "
+            f"I recommend {restaurant['restaurantname']}, "
+            f"located in the {restaurant['area']}. "
+            f"The price range is {restaurant['pricerange']}, "
+            f"and it is a {restaurant['food']} restaurant."
+        )
+>>>>>>> 0d527ad (Adjust chatbot language style)
 
 
 
@@ -469,7 +481,7 @@ def transition(dialogue, dialogue_act, user_text=""):
         else:
             return remember_last_response(
                 dialogue,
-                "Please say yes or no to confirm or deny"
+                "Say yes or no to confirm or deny"
             )
         #set pending correction to none and state to collect preferences
         dialogue["pending_correction"] = None
@@ -522,9 +534,9 @@ def transition(dialogue, dialogue_act, user_text=""):
 
         return remember_last_response(
             dialogue,
-            "Do you have any extra requirements, such as wanting \n"
-            "a romantic restaurant or one suitable for children? \n"
-            "Please enter YES or NO and I will further help you"
+            "What additional requirements do you have? For example, \n"
+            "preference for a romantic restaurant or one suitable for children. \n"
+            "Enter YES if you have extra requirements or NO if you don't."
         )
 
     
@@ -550,8 +562,8 @@ def transition(dialogue, dialogue_act, user_text=""):
             return remember_last_response(
                 dialogue,
                 "What extra requirements do you have? For example, "
-                "you can ask for a romantic restaurant or one suitable "
-                "for children. You can mention more than one."
+                "a romantic restaurant or one suitable "
+                "for children. It is possible to mention more than one."
             )
 
 
@@ -567,8 +579,8 @@ def transition(dialogue, dialogue_act, user_text=""):
             if not requirements:
                 return remember_last_response(
                     dialogue,
-                    "Please tell me your extra requirements, such as "
-                    "'romantic' or 'suitable for children', or say 'no'."
+                    "Tell me your extra requirements, such as "
+                    "'romantic' or 'suitable for children', or say 'NO'"
                 )
 
             #save the requirements for restaurant filtering
@@ -605,7 +617,7 @@ def transition(dialogue, dialogue_act, user_text=""):
             return remember_last_response(
                 dialogue,
                 "No restaurants match those preferences. "
-                "What other type of food would you like?"
+                "What other type of food do you like?"
             )
 
         #check each matching restaurant for reasoning conflicts
@@ -699,7 +711,7 @@ def transition(dialogue, dialogue_act, user_text=""):
                     return remember_last_response(
                                 dialogue,
                                 "Those new preferences are not matches by any of the restaurants \n"
-                                "Please change, food, area, or price range"
+                                "Change, food, area, or price range"
                             )
                 #choose a random restaurant from the matches again 
                 # and put the rest in remaining_restaurants
@@ -714,7 +726,7 @@ def transition(dialogue, dialogue_act, user_text=""):
                 #return updated recommendation
                 return remember_last_response(
                     dialogue,
-                    f"I would recommend {restaurant['restaurantname']} which is located in the {restaurant['area']}. \n"
+                    f"I recommend {restaurant['restaurantname']} located in the {restaurant['area']}. \n"
                     f"the price range is {restaurant['pricerange']} and it is an {restaurant['food']} restaurant. \n"
                 )
         
@@ -738,7 +750,7 @@ def transition(dialogue, dialogue_act, user_text=""):
             #again, return recommendation
             return remember_last_response(
                         dialogue,
-                        f"I would recommend {restaurant['restaurantname']} which is located in the {restaurant['area']}. \n"
+                        f"I recommend {restaurant['restaurantname']} located in the {restaurant['area']}. \n"
                         f"the price range is {restaurant['pricerange']} and it is an {restaurant['food']} restaurant. \n"
                     )
         
@@ -746,12 +758,12 @@ def transition(dialogue, dialogue_act, user_text=""):
         
         return remember_last_response(
             dialogue,
-            "You can ask for the details of the phone number, \n"
-            "address or postcode. or say goodbye"
+            "You can ask for the restaurant's phone number, \n"
+            "address or postcode. Or end this conversation by saying goodbye"
         )
 
     #Last resort
     return remember_last_response(
         dialogue,
-        "I'm sorry, I didn't understand that."
+        "I didn't understand that. Rephrase it."
         )
