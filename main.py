@@ -14,7 +14,8 @@ from models import (
 )
 from evaluate import evaluate_test
 from dialogue_state import create_dialogue, END
-from dialogue_manager import transition
+from dialogue_manager_formal import transition as formal_transition
+from dialogue_manager_friendly import transition as friendly_transition
 
 from restaurant_repository import load_restaurants
 
@@ -51,12 +52,30 @@ def interactive(trained_models, feature_extractor, model_type):
 def interactive_dialogue(model, feature_extractor, model_type):
     dialogue = create_dialogue()
     
+    print("Choose the chatbot:")
+    print("A = Formal")
+    print("B = Friendly")
+
+    style = input("Type A or B: ").strip().upper()
+
+    while style not in {"A", "B"}:
+        style = input("Please type A or B: ").strip().upper()
+
+    if style == "A":
+        transition = formal_transition
+    else:
+        transition = friendly_transition
+    
     #give user choice to see reasoning
-    choice= input("Show reasoning explanations? Type yes or no:").strip().lower()
+    choice = input(
+    "Show reasoning explanations? Type yes or no: "
+    ).strip().lower()
+
     while choice not in {"yes", "no"}:
-        input("Type yes or no:").strip().lower()
-    dialogue["show_reasoning"] = choice = "yes" #gets value True for "yes"
-        
+        choice = input("Type yes or no: ").strip().lower()
+
+    dialogue["show_reasoning"] = choice == "yes" #gets value True for "yes"
+            
     dialogue["fallback_method"] = "levenshtein" #because semantic matching does not exist yet
     
     

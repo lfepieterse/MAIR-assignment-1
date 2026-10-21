@@ -1,13 +1,3 @@
-# Python virtual environments
-.venv/
-venv/
-
-# Python cache files
+study_data/
 __pycache__/
-*.py[cod]
-
-# Environment variables and secrets
-.env
-
-# Saved model artifacts
-saved_models/
+.DS_Store
